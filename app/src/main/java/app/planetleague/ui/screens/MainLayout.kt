@@ -1,16 +1,21 @@
 package app.planetleague.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import app.planetleague.navigation.Screen
 import app.planetleague.ui.screens.gamehub.GameHubScreen
@@ -32,7 +37,7 @@ fun MainLayout(navController: NavController) {
         pltBalance = PreferencesHelper.getPLTBalance(context)
     }
     
-    // Get current route
+    // Get current route, defaulting to GameHub
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.GameHub.route
     
     val items = listOf(
@@ -49,21 +54,25 @@ fun MainLayout(navController: NavController) {
                     // PLT Balance display
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        IconButton(onClick = { /* Optional: Navigate to wallet details */ }) {
-                            BadgedBox(
-                                badge = {
-                                    Badge {
-                                        Text("$pltBalance")
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Default.Payments,
-                                    contentDescription = "PLT Balance"
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Payments,
+                                contentDescription = "PLT",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = pltBalance.toString(),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold
                                 )
-                            }
+                            )
                         }
                     }
                 }
@@ -97,9 +106,10 @@ fun MainLayout(navController: NavController) {
         // Content area
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentRoute) {
-                Screen.GameHub.route -> GameHubContent(navController)
+                Screen.GameHub.route, Screen.Main.route -> GameHubContent(navController)
                 Screen.Profile.route -> ProfileContent(navController)
                 Screen.LiveOps.route -> LiveOpsContent(navController)
+                else -> GameHubContent(navController) // Default case
             }
         }
     }

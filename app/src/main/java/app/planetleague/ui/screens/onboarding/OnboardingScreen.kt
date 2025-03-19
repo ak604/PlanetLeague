@@ -54,7 +54,7 @@ fun OnboardingScreen(navController: NavController) {
     // Skip onboarding if user has already signed up
     LaunchedEffect(hasSignedUp) {
         if (hasSignedUp) {
-            navController.navigate(Screen.Main.route) {
+            navController.navigate(Screen.GameHub.route) {
                 popUpTo(Screen.Onboarding.route) { inclusive = true }
             }
         }
@@ -79,7 +79,7 @@ fun OnboardingScreen(navController: NavController) {
         if (account != null) {
             // User is already signed in
             sharedPrefs.edit().putBoolean("has_signed_up", true).apply()
-            navController.navigate(Screen.Main.route) {
+            navController.navigate(Screen.GameHub.route) {
                 popUpTo(Screen.Onboarding.route) { inclusive = true }
             }
         }
@@ -322,7 +322,7 @@ fun OnboardingScreen(navController: NavController) {
             
             Button(
                 onClick = { 
-                    navController.navigate(Screen.Main.route) {
+                    navController.navigate(Screen.GameHub.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
                 },
