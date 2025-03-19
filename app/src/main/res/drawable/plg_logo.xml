@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- Background Circle -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M100,100m-90,0a90,90 0,1 1,180 0a90,90 0,1 1,-180 0"/>
+    
+    <!-- Planet -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M100,100m-60,0a60,60 0,1 1,120 0a60,60 0,1 1,-120 0"/>
+    
+    <!-- Planet Details -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M100,40a60,60 0,0 1,0 120a60,60 0,0 1,0 -120"/>
+    
+    <!-- Text "PLG" -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M70,120L80,120L80,80L70,80L70,120ZM90,120L100,120L100,80L90,80L90,120ZM110,120L120,120L120,80L110,80L110,120Z"/>
+</vector> 
