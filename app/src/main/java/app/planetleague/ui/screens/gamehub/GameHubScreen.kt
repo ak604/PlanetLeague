@@ -82,252 +82,234 @@ fun GameHubScreen(navController: NavController) {
         )
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Game Hub") },
-                actions = {
-                    IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = { navController.navigate(Screen.LiveOps.route) }) {
-                        Icon(Icons.Default.Star, contentDescription = "Live Ops")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(
+            text = "Available Games",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(16.dp)
+        )
+        
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(8.dp),
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = "Available Games",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp)
-            )
-            
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(games) { game ->
-                    GameCard(game = game) {
-                            selectedGame = game
-                        showGameDialog = true
-                    }
+            items(games) { game ->
+                GameCard(game = game) {
+                    selectedGame = game
+                    showGameDialog = true
                 }
             }
         }
-        
-        // Game Dialog - Shows the local HTML5 game in WebView
-        if (showGameDialog && selectedGame != null) {
-            Dialog(
-                onDismissRequest = { 
-                    // Show confirmation instead of closing directly
-                    showCloseConfirmation = true
-                },
-                properties = DialogProperties(
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = false,
-                    usePlatformDefaultWidth = false
-                )
+    }
+    
+    // Game Dialog - Shows the local HTML5 game in WebView
+    if (showGameDialog && selectedGame != null) {
+        Dialog(
+            onDismissRequest = { 
+                // Show confirmation instead of closing directly
+                showCloseConfirmation = true
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(0.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(0.dp)
-                ) {
-                    // HTML5 Game WebView loading local file with JavaScript interface
-                    AndroidView(
-                        factory = { context ->
-                            WebView(context).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                webViewClient = WebViewClient()
-                                settings.apply {
-                                    javaScriptEnabled = true
-                                    domStorageEnabled = true
-                                    loadWithOverviewMode = true
-                                    useWideViewPort = true
-                                    setSupportZoom(false)
-                                }
-                                
-                                // Set up JavaScript interface for game completion
-                                addJavascriptInterface(
-                                    GameJsInterface { score ->
-                                        gameScore = score
-                                        showGameDialog = false
-                            showRewardDialog = true
-                                    }, 
-                                    "AndroidGameInterface"
-                                )
-                                
-                                // Inject JavaScript to add the game completion callback
-                                webViewClient = object : WebViewClient() {
-                                    @SuppressLint("SetJavaScriptEnabled")
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
-                                        
-                                        // Inject JavaScript to listen for game completion
-                                        view?.evaluateJavascript("""
-                                            // Watch for game over or game completion
-                                            const observer = new MutationObserver(function(mutations) {
-                                                mutations.forEach(function(mutation) {
-                                                    // Check if game over screen is displayed
-                                                    if (document.getElementById('game-over') && 
-                                                        document.getElementById('game-over').style.display === 'flex') {
-                                                        // Extract score if available
-                                                        let score = 0;
-                                                        if (document.getElementById('final-score')) {
-                                                            const scoreText = document.getElementById('final-score').innerText;
-                                                            const scoreMatch = scoreText.match(/\\d+/);
-                                                            if (scoreMatch) score = parseInt(scoreMatch[0]);
-                                                        }
-                                                        // Send score to Android
-                                                        AndroidGameInterface.gameCompleted(score);
-                                                    }
-                                                    
-                                                    // For trivia and other games that use 'result' instead
-                                                    if (document.getElementById('result') && 
-                                                        document.getElementById('result').style.display === 'flex') {
-                                                        // Extract score if available
-                                                        let score = 0;
-                                                        if (document.getElementById('result-text')) {
-                                                            const scoreText = document.getElementById('result-text').innerText;
-                                                            const scoreMatch = scoreText.match(/\\d+/);
-                                                            if (scoreMatch) score = parseInt(scoreMatch[0]);
-                                                        }
-                                                        // Send score to Android
-                                                        AndroidGameInterface.gameCompleted(score);
-                                                    }
-                                                });
-                                            });
-                                            
-                                            // Observe changes to DOM
-                                            observer.observe(document.body, { 
-                                                attributes: true, 
-                                                childList: true, 
-                                                subtree: true 
-                                            });
-                                            
-                                            // Add listeners to all play-again buttons
-                                            document.addEventListener('click', function(event) {
-                                                if (event.target && event.target.id === 'play-again') {
-                                                    // Hide any game over screens when restarting
-                                                    if (document.getElementById('game-over')) {
-                                                        document.getElementById('game-over').style.display = 'none';
-                                                    }
-                                                    if (document.getElementById('result')) {
-                                                        document.getElementById('result').style.display = 'none';
-                                                    }
-                                                }
-                                            }, true);
-                                        """, null)
-                                    }
-                                }
-                                
-                                loadUrl(selectedGame!!.gameAssetPath)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    
-                    // Close button overlay
-                    IconButton(
-                        onClick = { 
-                            // Show confirmation dialog instead of closing directly
-                            showCloseConfirmation = true
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(48.dp)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Close Game",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(8.dp)
+                // HTML5 Game WebView loading local file with JavaScript interface
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
                             )
+                            webViewClient = WebViewClient()
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = true
+                                loadWithOverviewMode = true
+                                useWideViewPort = true
+                                setSupportZoom(false)
+                            }
+                            
+                            // Set up JavaScript interface for game completion
+                            addJavascriptInterface(
+                                GameJsInterface { score ->
+                                    gameScore = score
+                                    showGameDialog = false
+                                    showRewardDialog = true
+                                }, 
+                                "AndroidGameInterface"
+                            )
+                            
+                            // Inject JavaScript to add the game completion callback
+                            webViewClient = object : WebViewClient() {
+                                @SuppressLint("SetJavaScriptEnabled")
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    
+                                    // Inject JavaScript to listen for game completion
+                                    view?.evaluateJavascript("""
+                                        // Watch for game over or game completion
+                                        const observer = new MutationObserver(function(mutations) {
+                                            mutations.forEach(function(mutation) {
+                                                // Check if game over screen is displayed
+                                                if (document.getElementById('game-over') && 
+                                                    document.getElementById('game-over').style.display === 'flex') {
+                                                    // Extract score if available
+                                                    let score = 0;
+                                                    if (document.getElementById('final-score')) {
+                                                        const scoreText = document.getElementById('final-score').innerText;
+                                                        const scoreMatch = scoreText.match(/\\d+/);
+                                                        if (scoreMatch) score = parseInt(scoreMatch[0]);
+                                                    }
+                                                    // Send score to Android
+                                                    AndroidGameInterface.gameCompleted(score);
+                                                }
+                                                
+                                                // For trivia and other games that use 'result' instead
+                                                if (document.getElementById('result') && 
+                                                    document.getElementById('result').style.display === 'flex') {
+                                                    // Extract score if available
+                                                    let score = 0;
+                                                    if (document.getElementById('result-text')) {
+                                                        const scoreText = document.getElementById('result-text').innerText;
+                                                        const scoreMatch = scoreText.match(/\\d+/);
+                                                        if (scoreMatch) score = parseInt(scoreMatch[0]);
+                                                    }
+                                                    // Send score to Android
+                                                    AndroidGameInterface.gameCompleted(score);
+                                                }
+                                            });
+                                        });
+                                        
+                                        // Observe changes to DOM
+                                        observer.observe(document.body, { 
+                                            attributes: true, 
+                                            childList: true, 
+                                            subtree: true 
+                                        });
+                                        
+                                        // Add listeners to all play-again buttons
+                                        document.addEventListener('click', function(event) {
+                                            if (event.target && event.target.id === 'play-again') {
+                                                // Hide any game over screens when restarting
+                                                if (document.getElementById('game-over')) {
+                                                    document.getElementById('game-over').style.display = 'none';
+                                                }
+                                                if (document.getElementById('result')) {
+                                                    document.getElementById('result').style.display = 'none';
+                                                }
+                                            }
+                                        }, true);
+                                    """, null)
+                                }
+                            }
+                            
+                            loadUrl(selectedGame!!.gameAssetPath)
                         }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+                
+                // Close button overlay
+                IconButton(
+                    onClick = { 
+                        // Show confirmation dialog instead of closing directly
+                        showCloseConfirmation = true
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(48.dp)
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close Game",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(8.dp)
+                        )
                     }
                 }
             }
         }
-        
-        // Close Confirmation Dialog
-        if (showCloseConfirmation) {
-            AlertDialog(
-                onDismissRequest = { showCloseConfirmation = false },
-                title = { Text("Close Game?") },
-                text = { Text("Are you sure you want to quit? You won't receive any rewards unless you complete the game.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = { 
-                            showCloseConfirmation = false
-                            showGameDialog = false
-                        }
-                    ) {
-                        Text("Yes, Quit")
+    }
+    
+    // Close Confirmation Dialog
+    if (showCloseConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCloseConfirmation = false },
+            title = { Text("Close Game?") },
+            text = { Text("Are you sure you want to quit? You won't receive any rewards unless you complete the game.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { 
+                        showCloseConfirmation = false
+                        showGameDialog = false
                     }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showCloseConfirmation = false }
-                    ) {
-                        Text("Continue Playing")
-                    }
+                ) {
+                    Text("Yes, Quit")
                 }
-            )
-        }
-        
-        // Reward Dialog - Only appears when game is completed via JavaScript callback
-        if (showRewardDialog && selectedGame != null) {
-            val context = LocalContext.current
-            val sharedPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
-            
-            AlertDialog(
-                onDismissRequest = { showRewardDialog = false },
-                title = { Text("Congratulations!") },
-                text = { 
-                    Column {
-                        Text("You earned ${selectedGame!!.reward} PLT by playing ${selectedGame!!.name}!")
-                        Text("Total PLT: ${sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)}")
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { 
-                        // Update PLT balance
-                        val currentBalance = sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)
-                        sharedPrefs.edit()
-                            .putInt("plt_balance", currentBalance + selectedGame!!.reward)
-                            .apply()
-                        
-                        // Record game history
-                        val historyEntry = GameHistoryEntry(
-                            gameName = selectedGame!!.name,
-                            score = gameScore,
-                            pltEarned = selectedGame!!.reward
-                        )
-                        GameHistoryManager.addGameToHistory(context, historyEntry)
-                        
-                        showRewardDialog = false
-                    }) {
-                        Text("Claim Reward")
-                    }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCloseConfirmation = false }
+                ) {
+                    Text("Continue Playing")
                 }
-            )
-        }
+            }
+        )
+    }
+    
+    // Reward Dialog - Only appears when game is completed via JavaScript callback
+    if (showRewardDialog && selectedGame != null) {
+        val context = LocalContext.current
+        val sharedPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+        
+        AlertDialog(
+            onDismissRequest = { showRewardDialog = false },
+            title = { Text("Congratulations!") },
+            text = { 
+                Column {
+                    Text("You earned ${selectedGame!!.reward} PLT by playing ${selectedGame!!.name}!")
+                    Text("Total PLT: ${sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)}")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { 
+                    // Update PLT balance
+                    val currentBalance = sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)
+                    sharedPrefs.edit()
+                        .putInt("plt_balance", currentBalance + selectedGame!!.reward)
+                        .apply()
+                    
+                    // Record game history
+                    val historyEntry = GameHistoryEntry(
+                        gameName = selectedGame!!.name,
+                        score = gameScore,
+                        pltEarned = selectedGame!!.reward
+                    )
+                    GameHistoryManager.addGameToHistory(context, historyEntry)
+                    
+                    showRewardDialog = false
+                }) {
+                    Text("Claim Reward")
+                }
+            }
+        )
     }
 }
 

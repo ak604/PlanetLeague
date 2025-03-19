@@ -6,13 +6,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.planetleague.ui.screens.splash.SplashScreen
 import app.planetleague.ui.screens.onboarding.OnboardingScreen
-import app.planetleague.ui.screens.gamehub.GameHubScreen
-import app.planetleague.ui.screens.profile.ProfileScreen
-import app.planetleague.ui.screens.liveops.LiveOpsScreen
+import app.planetleague.ui.screens.MainLayout
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
     object Onboarding : Screen("onboarding")
+    object Main : Screen("main")
     object GameHub : Screen("gamehub")
     object Profile : Screen("profile")
     object LiveOps : Screen("liveops")
@@ -29,14 +28,17 @@ fun AppNavigation() {
         composable(Screen.Onboarding.route) {
             OnboardingScreen(navController)
         }
+        composable(Screen.Main.route) {
+            MainLayout(navController)
+        }
         composable(Screen.GameHub.route) {
-            GameHubScreen(navController)
+            MainLayout(navController)
         }
         composable(Screen.Profile.route) {
-            ProfileScreen(navController)
+            MainLayout(navController)
         }
         composable(Screen.LiveOps.route) {
-            LiveOpsScreen(navController)
+            MainLayout(navController)
         }
     }
 } 
