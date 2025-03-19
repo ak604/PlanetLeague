@@ -1,5 +1,6 @@
 package app.planetleague.ui.screens.profile
 
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,9 +10,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import app.planetleague.utils.Constants.INITIAL_PLT_BALANCE
+import app.planetleague.utils.GameHistoryEntry
+import app.planetleague.utils.GameHistoryManager
+import app.planetleague.utils.PreferencesHelper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class NFT(
     val name: String,
@@ -23,6 +32,21 @@ data class NFT(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavController) {
+    val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    var pltBalance by remember { mutableStateOf(sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)) }
+    
+    // Get game history and played count
+    val gameHistory = remember { mutableStateOf(GameHistoryManager.getGameHistory(context)) }
+    val gamesPlayed = remember { mutableStateOf(GameHistoryManager.getGamesPlayedCount(context)) }
+    
+    // Refresh data when screen is shown
+    LaunchedEffect(Unit) {
+        pltBalance = sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)
+        gameHistory.value = GameHistoryManager.getGameHistory(context)
+        gamesPlayed.value = GameHistoryManager.getGamesPlayedCount(context)
+    }
+
     var selectedTab by remember { mutableStateOf(0) }
     
     val nfts = listOf(
@@ -48,36 +72,29 @@ fun ProfileScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // User Stats Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.AccountCircle,
-                        contentDescription = "Profile",
-                        modifier = Modifier.size(64.dp)
-                    )
+                    Text("Your PLT Balance", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Player Name",
-                        style = MaterialTheme.typography.titleLarge
+                        text = "$pltBalance PLT",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        StatItem("Total PLT", "1,250")
-                        StatItem("NFTs", "3")
-                        StatItem("Games Played", "42")
+                        Text("Games Played: ${gamesPlayed.value}")
+                        Text("Total Earned: ${pltBalance - INITIAL_PLT_BALANCE} PLT")
                     }
                 }
             }
@@ -119,40 +136,76 @@ fun StatItem(label: String, value: String) {
 
 @Composable
 fun GameHistoryList() {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    val context = LocalContext.current
+    val gameHistory = remember { mutableStateOf(GameHistoryManager.getGameHistory(context)) }
+    
+    LaunchedEffect(Unit) {
+        gameHistory.value = GameHistoryManager.getGameHistory(context)
+    }
+    
+    if (gameHistory.value.isEmpty()) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "No games played yet. Go play some games!",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(gameHistory.value) { entry ->
+                GameHistoryItem(entry)
+            }
+        }
+    }
+}
+
+@Composable
+fun GameHistoryItem(entry: GameHistoryEntry) {
+    val dateFormat = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
+    val formattedDate = remember(entry.timestamp) { 
+        dateFormat.format(Date(entry.timestamp)) 
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        items(5) { index ->
-            Card(
-                modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.gameName,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Score: ${entry.score}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = formattedDate,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Game ${index + 1}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = "High Score: ${1000 - index * 100}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(Icons.Default.Star, contentDescription = "PLT")
-                        Text("${10 + index * 5} PLT")
-                    }
-                }
+                Icon(Icons.Default.Star, contentDescription = "PLT")
+                Text("${entry.pltEarned} PLT")
             }
         }
     }

@@ -25,6 +25,11 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import app.planetleague.navigation.Screen
 import androidx.compose.material3.ExperimentalMaterial3Api
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import app.planetleague.utils.Constants.INITIAL_PLT_BALANCE
+import app.planetleague.utils.GameHistoryEntry
+import app.planetleague.utils.GameHistoryManager
 
 data class Game(
     val name: String,
@@ -76,7 +81,7 @@ fun GameHubScreen(navController: NavController) {
             "file:///android_asset/memory_match.html"
         )
     )
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -110,7 +115,7 @@ fun GameHubScreen(navController: NavController) {
             ) {
                 items(games) { game ->
                     GameCard(game = game) {
-                        selectedGame = game
+                            selectedGame = game
                         showGameDialog = true
                     }
                 }
@@ -157,7 +162,7 @@ fun GameHubScreen(navController: NavController) {
                                     GameJsInterface { score ->
                                         gameScore = score
                                         showGameDialog = false
-                                        showRewardDialog = true
+                            showRewardDialog = true
                                     }, 
                                     "AndroidGameInterface"
                                 )
@@ -288,20 +293,36 @@ fun GameHubScreen(navController: NavController) {
         
         // Reward Dialog - Only appears when game is completed via JavaScript callback
         if (showRewardDialog && selectedGame != null) {
+            val context = LocalContext.current
+            val sharedPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+            
             AlertDialog(
                 onDismissRequest = { showRewardDialog = false },
                 title = { Text("Congratulations!") },
                 text = { 
                     Column {
-                        Text("You completed ${selectedGame!!.name}!")
-                        if (gameScore > 0) {
-                            Text("Your score: $gameScore")
-                        }
-                        Text("You earned ${selectedGame!!.reward} PLT!")
+                        Text("You earned ${selectedGame!!.reward} PLT by playing ${selectedGame!!.name}!")
+                        Text("Total PLT: ${sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)}")
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showRewardDialog = false }) {
+                    TextButton(onClick = { 
+                        // Update PLT balance
+                        val currentBalance = sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)
+                        sharedPrefs.edit()
+                            .putInt("plt_balance", currentBalance + selectedGame!!.reward)
+                            .apply()
+                        
+                        // Record game history
+                        val historyEntry = GameHistoryEntry(
+                            gameName = selectedGame!!.name,
+                            score = gameScore,
+                            pltEarned = selectedGame!!.reward
+                        )
+                        GameHistoryManager.addGameToHistory(context, historyEntry)
+                        
+                        showRewardDialog = false
+                    }) {
                         Text("Claim Reward")
                     }
                 }

@@ -32,6 +32,7 @@ import android.util.Log
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.ECKeyPair
 import java.security.SecureRandom
+import app.planetleague.utils.Constants.INITIAL_PLT_BALANCE
 
 class EthereumWallet(
     val address: String,
@@ -95,6 +96,7 @@ fun OnboardingScreen(navController: NavController) {
             // Save user information
             val editor = sharedPrefs.edit()
             editor.putBoolean("has_signed_up", true)
+            editor.putInt("plt_balance", INITIAL_PLT_BALANCE)
             account?.email?.let { editor.putString("user_email", it) }
             account?.displayName?.let { editor.putString("user_name", it) }
             account?.id?.let { editor.putString("user_id", it) }
@@ -147,6 +149,7 @@ fun OnboardingScreen(navController: NavController) {
         // Save wallet info
         val editor = sharedPrefs.edit()
         editor.putBoolean("has_signed_up", true)
+        editor.putInt("plt_balance", INITIAL_PLT_BALANCE)
         editor.putString("eth_address", address)
         editor.putString("wallet_type", "metamask")
         editor.apply()
@@ -223,7 +226,7 @@ fun OnboardingScreen(navController: NavController) {
             // Add fallback button when there's an error
             if (signInError != null) {
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
+            OutlinedButton(
                     onClick = { 
                         // Create a new wallet without sign-in
                         coroutineScope.launch {
@@ -235,6 +238,7 @@ fun OnboardingScreen(navController: NavController) {
                                 // Save wallet info
                                 val editor = sharedPrefs.edit()
                                 editor.putBoolean("has_signed_up", true)
+                                editor.putInt("plt_balance", INITIAL_PLT_BALANCE)
                                 editor.putString("eth_address", wallet.address)
                                 editor.putString("eth_private_key", wallet.privateKey)
                                 editor.apply()
@@ -247,8 +251,8 @@ fun OnboardingScreen(navController: NavController) {
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                modifier = Modifier.fillMaxWidth()
+            ) {
                     Text("Continue without Sign-In")
                 }
             }
@@ -310,7 +314,7 @@ fun OnboardingScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Initial Balance: $walletBalance PLT",
+                text = "Initial Balance: $INITIAL_PLT_BALANCE PLT",
                 style = MaterialTheme.typography.bodyLarge
             )
             
