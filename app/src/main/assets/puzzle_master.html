@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Puzzle Master</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 90vw;
+        }
+        .tile {
+            width: 60px;
+            height: 60px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .tile:active {
+            transform: scale(0.95);
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #timer {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        #message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            flex-direction: column;
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="timer">60</div>
+        <div id="puzzle-grid"></div>
+        <div id="score">Score: 0</div>
+        <div id="message">
+            <div id="message-text">Game Over!</div>
+            <button id="play-again">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3', '#33FFF3', '#FF8333', '#8333FF'];
+        let grid = [];
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval;
+        let selectedTiles = [];
+        
+        function initGame() {
+            const puzzleGrid = document.getElementById('puzzle-grid');
+            puzzleGrid.innerHTML = '';
+            grid = [];
+            score = 0;
+            timeLeft = 60;
+            selectedTiles = [];
+            document.getElementById('score').textContent = 'Score: 0';
+            document.getElementById('timer').textContent = timeLeft;
+            document.getElementById('message').style.display = 'none';
+            
+            // Create color pairs
+            let colorPairs = [];
+            for (let i = 0; i < 8; i++) {
+                colorPairs.push(colors[i], colors[i]);
+            }
+            
+            // Shuffle colors
+            colorPairs = shuffleArray(colorPairs);
+            
+            // Create grid
+            for (let i = 0; i < 16; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.dataset.index = i;
+                tile.style.backgroundColor = 'gray';
+                tile.addEventListener('click', handleTileClick);
+                puzzleGrid.appendChild(tile);
+                
+                grid.push({
+                    element: tile,
+                    color: colorPairs[i],
+                    revealed: false,
+                    matched: false
+                });
+            }
+            
+            // Start timer
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+        
+        function handleTileClick(event) {
+            const index = parseInt(event.target.dataset.index);
+            
+            // Ignore if already revealed or matched
+            if (grid[index].revealed || grid[index].matched) return;
+            
+            // Ignore if two tiles are already selected
+            if (selectedTiles.length >= 2) return;
+            
+            // Reveal the tile
+            grid[index].revealed = true;
+            grid[index].element.style.backgroundColor = grid[index].color;
+            selectedTiles.push(index);
+            
+            // If two tiles are selected, check for a match
+            if (selectedTiles.length === 2) {
+                const [first, second] = selectedTiles;
+                
+                if (grid[first].color === grid[second].color) {
+                    // Match found
+                    grid[first].matched = true;
+                    grid[second].matched = true;
+                    score += 10;
+                    document.getElementById('score').textContent = `Score: ${score}`;
+                    
+                    // Check if all tiles are matched
+                    if (grid.every(tile => tile.matched)) {
+                        endGame(true);
+                    }
+                    
+                    selectedTiles = [];
+                } else {
+                    // No match
+                    setTimeout(() => {
+                        grid[first].revealed = false;
+                        grid[second].revealed = false;
+                        grid[first].element.style.backgroundColor = 'gray';
+                        grid[second].element.style.backgroundColor = 'gray';
+                        selectedTiles = [];
+                    }, 1000);
+                }
+            }
+        }
+        
+        function updateTimer() {
+            timeLeft--;
+            document.getElementById('timer').textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                endGame(false);
+            }
+        }
+        
+        function endGame(won) {
+            clearInterval(timerInterval);
+            const message = document.getElementById('message');
+            const messageText = document.getElementById('message-text');
+            
+            if (won) {
+                messageText.textContent = `You Won! Score: ${score}`;
+            } else {
+                messageText.textContent = `Time's Up! Score: ${score}`;
+            }
+            
+            message.style.display = 'flex';
+        }
+        
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // Initialize the game
+        initGame();
+        
+        // Setup play again button
+        document.getElementById('play-again').addEventListener('click', initGame);
+    </script>
+</body>
+</html> 
