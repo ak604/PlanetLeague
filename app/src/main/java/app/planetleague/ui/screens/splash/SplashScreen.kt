@@ -4,13 +4,17 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import app.planetleague.R
 import app.planetleague.navigation.Screen
@@ -18,16 +22,27 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavController) {
-    var startAnimation by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 1000),
-        label = "scale"
+    var progress by remember { mutableStateOf(0f) }
+    val alphaAnim by animateFloatAsState(
+        targetValue = if (progress > 0f) 1f else 0f,
+        animationSpec = tween(durationMillis = 500),
+        label = "alpha"
     )
 
     LaunchedEffect(key1 = true) {
-        startAnimation = true
-        delay(2000L)
+        // Animate progress from 0 to 1 over 2 seconds
+        val startTime = System.currentTimeMillis()
+        val duration = 2000f
+        
+        while (progress < 1f) {
+            val currentTime = System.currentTimeMillis()
+            val elapsed = currentTime - startTime
+            progress = (elapsed / duration).coerceIn(0f, 1f)
+            delay(16) // Approximately 60fps
+        }
+        
+        // Wait a moment at 100% before navigating
+        delay(300)
         navController.navigate(Screen.Onboarding.route) {
             popUpTo(Screen.Splash.route) { inclusive = true }
         }
@@ -36,15 +51,42 @@ fun SplashScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.plg_logo),
-            contentDescription = "PLG Logo",
-            modifier = Modifier
-                .size(200.dp)
-                .scale(scale)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // App Logo
+            Image(
+                painter = painterResource(id = R.drawable.ic_planet_league_logo),
+                contentDescription = "PLG Logo",
+                modifier = Modifier
+                    .size(120.dp)
+                    .alpha(alphaAnim)
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // App Name
+            Text(
+                text = "Planet League",
+                color = MaterialTheme.colorScheme.onPrimary,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.alpha(alphaAnim)
+            )
+            
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Progress Bar
+            CircularProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        }
     }
 } 
