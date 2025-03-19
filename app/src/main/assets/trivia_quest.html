@@ -85,6 +85,10 @@
             flex-direction: column;
             display: none;
         }
+        #next-button {
+            display: none;
+            margin-top: 20px;
+        }
         button {
             background-color: #4CAF50;
             border: none;
@@ -102,13 +106,14 @@
 </head>
 <body>
     <div id="game-container">
-        <div id="progress">Question 1/10</div>
+        <div id="progress">Question 1/5</div>
         <div id="question-container">
             <div id="question">Loading question...</div>
             <button class="option" data-index="0">Option 1</button>
             <button class="option" data-index="1">Option 2</button>
             <button class="option" data-index="2">Option 3</button>
             <button class="option" data-index="3">Option 4</button>
+            <button id="next-button">Next Question</button>
         </div>
         <div id="score">Score: 0</div>
         <div id="result">
@@ -143,48 +148,26 @@
                 question: "Which famous scientist developed the theory of relativity?",
                 options: ["Isaac Newton", "Nikola Tesla", "Albert Einstein", "Stephen Hawking"],
                 correctIndex: 2
-            },
-            {
-                question: "What is the largest mammal in the world?",
-                options: ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
-                correctIndex: 1
-            },
-            {
-                question: "Which country is home to the Great Barrier Reef?",
-                options: ["Brazil", "Thailand", "Australia", "Mexico"],
-                correctIndex: 2
-            },
-            {
-                question: "Who painted the Mona Lisa?",
-                options: ["Vincent van Gogh", "Pablo Picasso", "Michelangelo", "Leonardo da Vinci"],
-                correctIndex: 3
-            },
-            {
-                question: "What is the hardest natural substance on Earth?",
-                options: ["Diamond", "Platinum", "Titanium", "Gold"],
-                correctIndex: 0
-            },
-            {
-                question: "How many players are on a standard soccer team?",
-                options: ["9", "10", "11", "12"],
-                correctIndex: 2
             }
         ];
         
         let currentQuestion = 0;
         let score = 0;
         let answeredCurrentQuestion = false;
+        const nextButton = document.getElementById('next-button');
         
         function initGame() {
             currentQuestion = 0;
             score = 0;
             document.getElementById('score').textContent = 'Score: 0';
             document.getElementById('result').style.display = 'none';
+            document.getElementById('next-button').style.display = 'none';
             showQuestion();
         }
         
         function showQuestion() {
             answeredCurrentQuestion = false;
+            nextButton.style.display = 'none';
             
             document.getElementById('progress').textContent = `Question ${currentQuestion + 1}/${questions.length}`;
             
@@ -217,16 +200,14 @@
                 document.getElementById('score').textContent = `Score: ${score}`;
             }
             
-            // Move to next question after a delay
-            setTimeout(() => {
-                currentQuestion++;
-                
-                if (currentQuestion < questions.length) {
-                    showQuestion();
-                } else {
-                    endGame();
-                }
-            }, 1500);
+            // Show next button instead of automatically progressing
+            if (currentQuestion < questions.length - 1) {
+                nextButton.style.display = 'block';
+            } else {
+                // If this is the last question, show a "Finish" button
+                nextButton.textContent = "Finish Quiz";
+                nextButton.style.display = 'block';
+            }
         }
         
         function endGame() {
@@ -235,10 +216,26 @@
             
             resultText.textContent = `Final Score: ${score}/${questions.length * 10}`;
             result.style.display = 'flex';
+            
+            // Call Android interface if available
+            if (typeof AndroidGameInterface !== 'undefined') {
+                AndroidGameInterface.gameCompleted(score);
+            }
         }
         
         // Initialize the game
         initGame();
+        
+        // Setup next button
+        nextButton.addEventListener('click', function() {
+            currentQuestion++;
+            
+            if (currentQuestion < questions.length) {
+                showQuestion();
+            } else {
+                endGame();
+            }
+        });
         
         // Setup play again button
         document.getElementById('play-again').addEventListener('click', initGame);

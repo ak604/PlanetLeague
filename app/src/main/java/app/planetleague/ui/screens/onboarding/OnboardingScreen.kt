@@ -3,6 +3,7 @@ package app.planetleague.ui.screens.onboarding
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,25 +12,38 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import app.planetleague.navigation.Screen
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.util.Log
+import org.web3j.crypto.Credentials
+import org.web3j.crypto.ECKeyPair
+import java.security.SecureRandom
+
+class EthereumWallet(
+    val address: String,
+    val privateKey: String
+)
 
 @Composable
 fun OnboardingScreen(navController: NavController) {
     var showWalletSetup by remember { mutableStateOf(false) }
-    var walletBalance by remember { mutableStateOf(0) }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    var walletAddress by remember { mutableStateOf("") }
+    var walletBalance by remember { mutableStateOf(100) } // Default PLT balance
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
     // Check if user has already signed up
@@ -46,8 +60,9 @@ fun OnboardingScreen(navController: NavController) {
     }
     
     var signInError by remember { mutableStateOf<String?>(null) }
+    var isConnectingMetaMask by remember { mutableStateOf(false) }
     
-    // Configure Google Sign In with better error handling
+    // Configure Google Sign In
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
@@ -69,7 +84,7 @@ fun OnboardingScreen(navController: NavController) {
         }
     }
     
-    // Activity result launcher for Google Sign-In with enhanced logging
+    // Activity result launcher for Google Sign-In
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -77,7 +92,7 @@ fun OnboardingScreen(navController: NavController) {
         try {
             val account = task.getResult(ApiException::class.java)
             
-            // Save user information if needed
+            // Save user information
             val editor = sharedPrefs.edit()
             editor.putBoolean("has_signed_up", true)
             account?.email?.let { editor.putString("user_email", it) }
@@ -86,10 +101,28 @@ fun OnboardingScreen(navController: NavController) {
             editor.apply()
             
             Toast.makeText(context, "Signed in as ${account?.displayName}", Toast.LENGTH_SHORT).show()
+            
+            // Generate Ethereum wallet for Google users
+            coroutineScope.launch {
+                try {
+                    val wallet = withContext(Dispatchers.IO) {
+                        createEthereumWallet("google_${account?.id ?: "user"}")
+                    }
+                    // Save wallet info
+                    editor.putString("eth_address", wallet.address)
+                    editor.putString("eth_private_key", wallet.privateKey)
+                    editor.apply()
+                    
+                    walletAddress = wallet.address
             showWalletSetup = true
+                } catch (e: Exception) {
+                    signInError = "Failed to create wallet: ${e.message}"
+                    Log.e("EthereumWallet", "Error creating wallet", e)
+                }
+            }
+            
             signInError = null
         } catch (e: ApiException) {
-            // Enhanced error reporting
             val errorMessage = when (e.statusCode) {
                 10 -> "Developer Error (10): SHA1 fingerprint or package name mismatch"
                 else -> "Sign-in failed: ${e.statusCode}"
@@ -98,6 +131,28 @@ fun OnboardingScreen(navController: NavController) {
             Log.e("GoogleSignIn", "Error: Code ${e.statusCode}, Message: ${e.message}")
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
         }
+    }
+    
+    // Activity result launcher for MetaMask
+    val metaMaskLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // Handle MetaMask return
+        isConnectingMetaMask = false
+        
+        // In a real app, you'd need to handle the result properly
+        // For this demo, we'll just simulate a successful connection
+        val address = "0x" + (1..40).map { "0123456789ABCDEF".random() }.joinToString("")
+        
+        // Save wallet info
+        val editor = sharedPrefs.edit()
+        editor.putBoolean("has_signed_up", true)
+        editor.putString("eth_address", address)
+        editor.putString("wallet_type", "metamask")
+        editor.apply()
+        
+        walletAddress = address
+        showWalletSetup = true
     }
 
     Column(
@@ -139,6 +194,22 @@ fun OnboardingScreen(navController: NavController) {
                 Text("Sign up with Google")
             }
             
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Button(
+                onClick = { 
+                    // Launch MetaMask connection flow
+                    connectToMetaMask(context, metaMaskLauncher)
+                    isConnectingMetaMask = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF9E0D)
+                )
+            ) {
+                Text("Connect with MetaMask")
+            }
+            
             // Show error message if any
             signInError?.let {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -154,14 +225,46 @@ fun OnboardingScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { 
-                        // Skip authentication and proceed
-                        sharedPrefs.edit().putBoolean("has_signed_up", true).apply()
+                        // Create a new wallet without sign-in
+                        coroutineScope.launch {
+                            try {
+                                val wallet = withContext(Dispatchers.IO) {
+                                    createEthereumWallet("guest_user")
+                                }
+                                
+                                // Save wallet info
+                                val editor = sharedPrefs.edit()
+                                editor.putBoolean("has_signed_up", true)
+                                editor.putString("eth_address", wallet.address)
+                                editor.putString("eth_private_key", wallet.privateKey)
+                                editor.apply()
+                                
+                                walletAddress = wallet.address
                         showWalletSetup = true
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Failed to create wallet: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Log.e("EthereumWallet", "Error creating wallet", e)
+                            }
+                        }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Continue without Google Sign-In")
+                    Text("Continue without Sign-In")
                 }
+            }
+            
+            // Show MetaMask connecting dialog
+            if (isConnectingMetaMask) {
+                AlertDialog(
+                    onDismissRequest = { isConnectingMetaMask = false },
+                    title = { Text("Connecting to MetaMask") },
+                    text = { Text("Please open the MetaMask app to complete the connection.") },
+                    confirmButton = {
+                        TextButton(onClick = { isConnectingMetaMask = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
             
         } else if (showWalletSetup) {
@@ -180,8 +283,34 @@ fun OnboardingScreen(navController: NavController) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            // Show wallet address
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Ethereum Address:",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = walletAddress.take(10) + "..." + walletAddress.takeLast(8),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
             Text(
-                text = "Initial Balance: 100 PLT",
+                text = "Initial Balance: $walletBalance PLT",
                 style = MaterialTheme.typography.bodyLarge
             )
             
@@ -195,6 +324,52 @@ fun OnboardingScreen(navController: NavController) {
             ) {
                 Text("Start Playing")
             }
+        }
+    }
+}
+
+private fun connectToMetaMask(context: Context, launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
+    try {
+        // Try to open MetaMask app first
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = Uri.parse("https://metamask.app.link/dapp/planetleague.app/connect")
+            putExtra("from", "Planet League")
+        }
+        
+        launcher.launch(intent)
+    } catch (e: Exception) {
+        // If we can't open the app, try to open the website
+        try {
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://metamask.io/download/"))
+            context.startActivity(webIntent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to connect to MetaMask: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private suspend fun createEthereumWallet(password: String): EthereumWallet {
+    return withContext(Dispatchers.IO) {
+        try {
+            // Generate a new private key
+            val privateKey = ByteArray(32)
+            SecureRandom().nextBytes(privateKey)
+            
+            // Convert to ECKeyPair
+            val keyPair = ECKeyPair.create(privateKey)
+            
+            // Get the address
+            val credentials = Credentials.create(keyPair)
+            val address = credentials.address
+            
+            // Return the wallet
+            EthereumWallet(
+                address = address,
+                privateKey = keyPair.privateKey.toString(16) // Hex format
+            )
+        } catch (e: Exception) {
+            Log.e("EthereumWallet", "Error creating wallet", e)
+            throw e
         }
     }
 } 

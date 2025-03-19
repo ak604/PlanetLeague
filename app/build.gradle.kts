@@ -72,6 +72,21 @@ dependencies {
     // Add Google Identity Services
     implementation("com.google.android.gms:play-services-auth:20.7.0")
     
+    // Web3j for Ethereum interactions
+    implementation("org.web3j:core:4.9.7") {
+        exclude(group = "com.google.protobuf", module = "protobuf-java")
+    }
+    implementation("com.github.komputing.kethereum:crypto:0.85.7") {
+        exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
+    }
+    implementation("com.github.komputing.kethereum:bip39:0.85.7")
+    
+    // QR code scanning (fixed version)
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0") {
+        exclude(group = "com.google.zxing", module = "core")
+    }
+    implementation("com.google.zxing:core:3.5.2")
+    
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

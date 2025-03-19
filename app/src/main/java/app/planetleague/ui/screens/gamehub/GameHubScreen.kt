@@ -46,6 +46,7 @@ class GameJsInterface(private val onGameCompleted: (Int) -> Unit) {
 fun GameHubScreen(navController: NavController) {
     var showRewardDialog by remember { mutableStateOf(false) }
     var showGameDialog by remember { mutableStateOf(false) }
+    var showCloseConfirmation by remember { mutableStateOf(false) }
     var selectedGame by remember { mutableStateOf<Game?>(null) }
     var gameScore by remember { mutableStateOf(0) }
     
@@ -120,8 +121,8 @@ fun GameHubScreen(navController: NavController) {
         if (showGameDialog && selectedGame != null) {
             Dialog(
                 onDismissRequest = { 
-                    showGameDialog = false
-                    // Don't show reward automatically anymore
+                    // Show confirmation instead of closing directly
+                    showCloseConfirmation = true
                 },
                 properties = DialogProperties(
                     dismissOnBackPress = true,
@@ -234,8 +235,8 @@ fun GameHubScreen(navController: NavController) {
                     // Close button overlay
                     IconButton(
                         onClick = { 
-                            showGameDialog = false 
-                            // Don't give a reward if user just closes the game
+                            // Show confirmation dialog instead of closing directly
+                            showCloseConfirmation = true
                         },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -257,6 +258,32 @@ fun GameHubScreen(navController: NavController) {
                     }
                 }
             }
+        }
+        
+        // Close Confirmation Dialog
+        if (showCloseConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showCloseConfirmation = false },
+                title = { Text("Close Game?") },
+                text = { Text("Are you sure you want to quit? You won't receive any rewards unless you complete the game.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = { 
+                            showCloseConfirmation = false
+                            showGameDialog = false
+                        }
+                    ) {
+                        Text("Yes, Quit")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showCloseConfirmation = false }
+                    ) {
+                        Text("Continue Playing")
+                    }
+                }
+            )
         }
         
         // Reward Dialog - Only appears when game is completed via JavaScript callback
