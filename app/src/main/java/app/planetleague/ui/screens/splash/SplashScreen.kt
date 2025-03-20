@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -25,31 +26,32 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(navController: NavController) {
     var progress by remember { mutableStateOf(0f) }
+    val gradientColors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.tertiary
+    )
+    
+    // Unified animation controls
     val alphaAnim by animateFloatAsState(
-        targetValue = if (progress > 0f) 1f else 0f,
-        animationSpec = tween(durationMillis = 500),
-        label = "alpha"
+        targetValue = 1f,
+        animationSpec = tween(300)
     )
     val scaleAnim by animateFloatAsState(
-        targetValue = if (progress > 0f) 1f else 0.5f,
-        animationSpec = tween(durationMillis = 500),
-        label = "scale"
+        targetValue = if (progress > 0.5f) 1f else 0.9f,
+        animationSpec = tween(500)
     )
 
     LaunchedEffect(key1 = true) {
-        // Animate progress from 0 to 1 over 2 seconds
+        // Single continuous animation
+        val totalDuration = 2000L
         val startTime = System.currentTimeMillis()
-        val duration = 2000f
         
         while (progress < 1f) {
-            val currentTime = System.currentTimeMillis()
-            val elapsed = currentTime - startTime
-            progress = (elapsed / duration).coerceIn(0f, 1f)
-            delay(16) // Approximately 60fps
+            val elapsed = System.currentTimeMillis() - startTime
+            progress = (elapsed / totalDuration.toFloat()).coerceIn(0f, 1f)
+            delay(16)
         }
         
-        // Wait a moment at 100% before navigating
-        delay(300)
         navController.navigate(Screen.Onboarding.route) {
             popUpTo(Screen.Splash.route) { inclusive = true }
         }
@@ -60,19 +62,16 @@ fun SplashScreen(navController: NavController) {
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.tertiary
-                    )
+                    colors = gradientColors
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // App Logo
+            // Always visible animated logo
             Image(
                 painter = painterResource(id = R.drawable.ic_planet_league_logo),
                 contentDescription = "PLG Logo",
@@ -81,27 +80,24 @@ fun SplashScreen(navController: NavController) {
                     .scale(scaleAnim)
                     .alpha(alphaAnim)
             )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // App Name
-            Text(
-                text = "Planet League",
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.alpha(alphaAnim)
-            )
-            
-            Spacer(modifier = Modifier.height(40.dp))
-            
-            // Progress Bar
-            CircularProgressIndicator(
+
+            // Progress indicator that grows with the animation
+            LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier
+                    .width(200.dp)
+                    .height(8.dp),
                 color = MaterialTheme.colorScheme.onPrimary,
                 trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                strokeWidth = 3.dp
+            )
+            
+            // Loading text
+            Text(
+                text = "Loading...",
+                color = MaterialTheme.colorScheme.onPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
     }
