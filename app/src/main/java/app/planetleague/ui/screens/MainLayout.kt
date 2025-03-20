@@ -3,6 +3,7 @@ package app.planetleague.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -22,34 +23,39 @@ import app.planetleague.ui.screens.gamehub.GameHubScreen
 import app.planetleague.ui.screens.liveops.LiveOpsScreen
 import app.planetleague.ui.screens.profile.ProfileScreen
 import app.planetleague.utils.PreferencesHelper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.NavigationBarItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainLayout(navController: NavController) {
-    val context = LocalContext.current
-    var pltBalance by remember { mutableStateOf(PreferencesHelper.getPLTBalance(context)) }
+fun MainLayout(
+    navController: NavController,
+    showGameHub: @Composable () -> Unit,
+    showProfile: @Composable () -> Unit,
+    showLiveOps: @Composable () -> Unit
+) {
+    // Track selected tab locally instead of using navigation
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
     
-    // Monitor navigation changes to update PLT balance when returning to screen
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    
-    // Update PLT balance whenever screen becomes active
-    LaunchedEffect(navBackStackEntry) {
-        pltBalance = PreferencesHelper.getPLTBalance(context)
-    }
-    
-    // Get current route, defaulting to GameHub
-    val currentRoute = navBackStackEntry?.destination?.route ?: Screen.GameHub.route
-    
-    val items = listOf(
-        Triple(Screen.GameHub.route, "Games", Icons.Default.Gamepad),
-        Triple(Screen.Profile.route, "Profile", Icons.Default.Person), 
-        Triple(Screen.LiveOps.route, "Events", Icons.Default.EmojiEvents)
-    )
+    // Remember PLT balance to avoid recalculation on each recomposition
+    val pltBalance = remember { 1000 }
     
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(getScreenTitle(currentRoute)) },
+                title = { 
+                    Text(
+                        when (selectedTab) {
+                            0 -> "Game Hub"
+                            1 -> "Profile"
+                            2 -> "Tournaments"
+                            else -> "Planet League"
+                        }
+                    ) 
+                },
                 actions = {
                     // PLT Balance display
                     Surface(
@@ -80,36 +86,37 @@ fun MainLayout(navController: NavController) {
         },
         bottomBar = {
             NavigationBar {
-                items.forEach { (route, title, icon) ->
-                    NavigationBarItem(
-                        icon = { Icon(icon, contentDescription = title) },
-                        label = { Text(title) },
-                        selected = currentRoute == route,
-                        onClick = {
-                            navController.navigate(route) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a large stack of destinations
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                // Avoid multiple copies of the same destination
-                                launchSingleTop = true
-                                // Restore state when navigating back
-                                restoreState = true
-                            }
-                        }
-                    )
-                }
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Games, contentDescription = "Games") },
+                    label = { Text("Games") },
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.EmojiEvents, contentDescription = "Tournaments") },
+                    label = { Text("Tournaments") },
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 }
+                )
             }
         }
     ) { innerPadding ->
-        // Content area
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (currentRoute) {
-                Screen.GameHub.route, Screen.Main.route -> GameHubContent(navController)
-                Screen.Profile.route -> ProfileContent(navController)
-                Screen.LiveOps.route -> LiveOpsContent(navController)
-                else -> GameHubContent(navController) // Default case
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Show the appropriate screen based on selected tab
+            when (selectedTab) {
+                0 -> showGameHub()
+                1 -> showProfile()
+                2 -> showLiveOps()
             }
         }
     }
