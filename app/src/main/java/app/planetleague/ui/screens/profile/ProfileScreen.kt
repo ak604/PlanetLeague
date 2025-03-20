@@ -56,16 +56,6 @@ fun ProfileScreen(navController: NavController) {
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Profile") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
     ) { padding ->
         Column(
             modifier = Modifier

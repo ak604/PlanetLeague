@@ -85,12 +85,6 @@ fun GameHubScreen(navController: NavController) {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        Text(
-            text = "Available Games",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(16.dp)
-        )
-        
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(8.dp),

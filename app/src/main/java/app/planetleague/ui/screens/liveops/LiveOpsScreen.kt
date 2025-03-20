@@ -47,11 +47,6 @@ fun LiveOpsScreen(navController: NavController) {
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("LiveOps") }
-            )
-        }
     ) { padding ->
         Column(
             modifier = Modifier
