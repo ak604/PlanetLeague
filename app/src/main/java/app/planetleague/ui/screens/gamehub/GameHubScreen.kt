@@ -26,10 +26,17 @@ import androidx.navigation.NavController
 import app.planetleague.navigation.Screen
 import androidx.compose.material3.ExperimentalMaterial3Api
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalContext
 import app.planetleague.utils.Constants.INITIAL_PLT_BALANCE
 import app.planetleague.utils.GameHistoryEntry
 import app.planetleague.utils.GameHistoryManager
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.VideogameAsset
+import androidx.compose.material.icons.filled.Extension
 
 data class Game(
     val name: String,
@@ -58,7 +65,7 @@ fun GameHubScreen(navController: NavController) {
     val games = listOf(
         Game(
             "Puzzle Master", 
-            "Solve challenging puzzles", 
+            "Solve puzzles",
             10,
             "file:///android_asset/puzzle_master.html"
         ),
@@ -87,11 +94,20 @@ fun GameHubScreen(navController: NavController) {
     ) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.05f)
+                        )
+                    )
+                )
+                .padding(8.dp)
         ) {
             items(games) { game ->
-                GameCard(game = game) {
+                GameGridItem(game = game) {
                     selectedGame = game
                     showGameDialog = true
                 }
@@ -309,7 +325,7 @@ fun GameHubScreen(navController: NavController) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameCard(
+fun GameGridItem(
     game: Game,
     onClick: () -> Unit
 ) {
@@ -317,8 +333,18 @@ fun GameCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp)
-            .padding(8.dp)
+            .height(200.dp)
+            .padding(8.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        )
     ) {
         Column(
             modifier = Modifier
@@ -327,22 +353,70 @@ fun GameCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Game Icon with Gradient Background
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        ),
+                        shape = MaterialTheme.shapes.medium
+                    )
+            ) {
+                Icon(
+                    imageVector = when (game.name.hashCode() % 4) {
+                        0 -> Icons.Filled.SportsEsports
+                        1 -> Icons.Filled.Casino
+                        2 -> Icons.Filled.Extension
+                        else -> Icons.Filled.VideogameAsset
+                    },
+                    contentDescription = game.name,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            
             Text(
                 text = game.name,
                 style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
+            
             Spacer(modifier = Modifier.height(8.dp))
+            
             Text(
                 text = game.description,
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 2
             )
+            
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Reward: ${game.reward} PLT",
-                style = MaterialTheme.typography.bodySmall
-            )
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = "Reward",
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "${game.reward} PLT",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
         }
     }
 } 

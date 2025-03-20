@@ -11,6 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +29,11 @@ fun SplashScreen(navController: NavController) {
         targetValue = if (progress > 0f) 1f else 0f,
         animationSpec = tween(durationMillis = 500),
         label = "alpha"
+    )
+    val scaleAnim by animateFloatAsState(
+        targetValue = if (progress > 0f) 1f else 0.5f,
+        animationSpec = tween(durationMillis = 500),
+        label = "scale"
     )
 
     LaunchedEffect(key1 = true) {
@@ -51,7 +58,14 @@ fun SplashScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary),
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary
+                    )
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -64,6 +78,7 @@ fun SplashScreen(navController: NavController) {
                 contentDescription = "PLG Logo",
                 modifier = Modifier
                     .size(120.dp)
+                    .scale(scaleAnim)
                     .alpha(alphaAnim)
             )
             
@@ -84,8 +99,9 @@ fun SplashScreen(navController: NavController) {
             CircularProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.primaryContainer
+                color = MaterialTheme.colorScheme.onPrimary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                strokeWidth = 3.dp
             )
         }
     }
