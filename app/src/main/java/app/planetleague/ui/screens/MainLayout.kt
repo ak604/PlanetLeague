@@ -1,12 +1,15 @@
 package app.planetleague.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -29,8 +32,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
+import app.planetleague.utils.Constants.INITIAL_PLT_BALANCE
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,52 +48,36 @@ fun MainLayout(
 ) {
     // Track selected tab locally instead of using navigation
     var selectedTab by rememberSaveable { mutableStateOf(0) }
-    
+
+    val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     // Remember PLT balance to avoid recalculation on each recomposition
-    val pltBalance = remember { 1000 }
+     var pltBalance by remember { mutableStateOf(sharedPrefs.getInt("plt_balance", INITIAL_PLT_BALANCE)) }
     
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                title = { 
-                    Text(
-                        when (selectedTab) {
-                            0 -> "Game Hub"
-                            1 -> "Profile"
-                            2 -> "Tournaments"
-                            else -> "Planet League"
-                        }
-                    ) 
-                },
+            TopAppBar(
+                title = { Text("Planet League") },
                 actions = {
-                    // PLT Balance display
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.padding(end = 8.dp)
+                    // PLT token balance with icon
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Payments,
-                                contentDescription = "PLT",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = pltBalance.toString(),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-                        }
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "PLT Tokens",
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        // Use the actual PLT token value from viewModel or state
+                        Text(
+                            text = "${pltBalance} PLT",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             )
